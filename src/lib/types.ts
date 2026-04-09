@@ -23,3 +23,19 @@ export interface ReceiptData extends TransactionData {
   usdValue: number;
   asset: "rBTC" | "rUSDT";
 }
+
+export interface ReceiptDataClient {
+  hash: string;
+  from: string;
+  to: string | null;
+  value: string;
+  valueFormatted: string;
+  gasUsed: string;
+  gasPrice: string;
+  blockNumber: string;
+  timestamp: number;
+  blockTimestamp: string;
+  status: "success" | "reverted";
+  usdValue: number;
+  asset: "rBTC" | "rUSDT";
+}

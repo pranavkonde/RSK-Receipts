@@ -2,16 +2,18 @@
 
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import type { ReceiptData } from "./types";
+import { formatEther, formatGwei } from "viem";
+import type { ReceiptDataClient } from "./types";
 
-function formatDate(d: Date): string {
-  return d.toLocaleString("en-US", {
+function formatDate(d: Date | string): string {
+  const date = typeof d === "string" ? new Date(d) : d;
+  return date.toLocaleString("en-US", {
     dateStyle: "medium",
     timeStyle: "medium",
   });
 }
 
-export function generateReceiptPdf(data: ReceiptData): void {
+export function generateReceiptPdf(data: ReceiptDataClient): void {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const margin = 20;
   let y = 20;
@@ -30,11 +32,10 @@ export function generateReceiptPdf(data: ReceiptData): void {
 
   doc.setTextColor(0, 0, 0);
 
-  // Receipt details table
   const tableData = [
     ["Transaction Hash", data.hash],
     ["Date & Time", formatDate(data.blockTimestamp)],
-    ["Block Number", data.blockNumber.toString()],
+    ["Block Number", data.blockNumber],
     ["Status", data.status === "success" ? "Success" : "Reverted"],
     ["From", data.from],
     ["To", data.to ?? "Contract Creation"],
@@ -62,25 +63,24 @@ export function generateReceiptPdf(data: ReceiptData): void {
     margin: { left: margin, right: margin },
   });
 
-  const lastTable = (doc as unknown as { lastAutoTable?: { finalY: number } })
-    .lastAutoTable;
-  y = (lastTable?.finalY ?? y) + 15;
+  y = (doc.lastAutoTable?.finalY ?? y) + 15;
 
-  // Gas info
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.text("Gas Details", margin, y);
   y += 7;
 
-  const gasCostWei = data.gasUsed * data.gasPrice;
-  const gasCostEth = Number(gasCostWei) / 1e18;
+  const gasUsedBn = BigInt(data.gasUsed);
+  const gasPriceBn = BigInt(data.gasPrice);
+  const gasCostWei = gasUsedBn * gasPriceBn;
+  const gasCostEth = formatEther(gasCostWei);
 
   autoTable(doc, {
     startY: y,
     body: [
-      ["Gas Used", data.gasUsed.toString()],
-      ["Effective Gas Price", `${(Number(data.gasPrice) / 1e9).toFixed(2)} Gwei`],
-      ["Total Gas Cost (rBTC)", gasCostEth.toFixed(8)],
+      ["Gas Used", data.gasUsed],
+      ["Effective Gas Price", `${formatGwei(gasPriceBn)} Gwei`],
+      ["Total Gas Cost (rBTC)", gasCostEth],
     ],
     theme: "plain",
     bodyStyles: { fontSize: 9 },
@@ -91,11 +91,8 @@ export function generateReceiptPdf(data: ReceiptData): void {
     margin: { left: margin, right: margin },
   });
 
-  const lastTable2 = (doc as unknown as { lastAutoTable?: { finalY: number } })
-    .lastAutoTable;
-  y = (lastTable2?.finalY ?? y) + 15;
+  y = (doc.lastAutoTable?.finalY ?? y) + 15;
 
-  // Footer
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(120, 120, 120);
@@ -105,7 +102,6 @@ export function generateReceiptPdf(data: ReceiptData): void {
     doc.internal.pageSize.getHeight() - 10
   );
 
-  // Download
   const filename = `rsk-receipt-${data.hash.slice(0, 10)}.pdf`;
   doc.save(filename);
 }

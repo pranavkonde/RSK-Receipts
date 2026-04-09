@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { processTransaction, generateReceiptPdf } from "@/lib";
-import type { ReceiptData } from "@/lib/types";
+import { processTransaction } from "@/app/actions";
+import { generateReceiptPdf } from "@/lib/pdf-generator";
+import type { ReceiptDataClient } from "@/lib/types";
 
 export function ReceiptForm() {
   const [txHash, setTxHash] = useState("");
   const [asset, setAsset] = useState<"rBTC" | "rUSDT">("rBTC");
-  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [receipt, setReceipt] = useState<ReceiptDataClient | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,15 +51,17 @@ export function ReceiptForm() {
             value={txHash}
             onChange={(e) => setTxHash(e.target.value)}
             placeholder="0x..."
+            pattern="(0x)?[0-9a-fA-F]{64}"
+            title="64-character hexadecimal transaction hash (0x prefix optional)"
             className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 focus:ring-2 focus:ring-amber-500 focus:border-transparent font-mono text-sm"
             disabled={loading}
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+        <fieldset className="space-y-2 border-0 p-0 m-0">
+          <legend className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
             Asset Type
-          </label>
+          </legend>
           <div className="flex gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -87,19 +90,45 @@ export function ReceiptForm() {
             For native RBTC transfers, use rBTC. For ERC-20 token transfers
             (e.g. rUSDT), use rUSDT.
           </p>
-        </div>
+        </fieldset>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 px-6 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:bg-amber-400 disabled:cursor-not-allowed text-white font-semibold transition-colors"
+          className="w-full py-3 px-6 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:bg-amber-400 disabled:cursor-not-allowed text-white font-semibold transition-colors flex items-center justify-center gap-2"
         >
+          {loading && (
+            <svg
+              className="w-5 h-5 animate-spin shrink-0"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+          )}
           {loading ? "Fetching transaction..." : "Generate Receipt"}
         </button>
       </form>
 
       {error && (
-        <div className="mt-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
+        <div
+          className="mt-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
+          role="alert"
+        >
           {error}
         </div>
       )}
@@ -123,25 +152,31 @@ export function ReceiptForm() {
             <div>
               <dt className="text-zinc-500">Date</dt>
               <dd className="font-mono text-xs">
-                {receipt.blockTimestamp.toLocaleString()}
+                {new Date(receipt.blockTimestamp).toLocaleString()}
               </dd>
             </div>
             <div>
               <dt className="text-zinc-500">From → To</dt>
-              <dd className="font-mono text-xs truncate">
-                {receipt.from.slice(0, 8)}... → {receipt.to?.slice(0, 8) ?? "..."}
+              <dd
+                className="font-mono text-xs truncate"
+                title={`${receipt.from} → ${receipt.to ?? "Contract creation"}`}
+              >
+                {receipt.from.slice(0, 8)}... →{" "}
+                {receipt.to?.slice(0, 8) ?? "..."}
               </dd>
             </div>
           </dl>
           <button
+            type="button"
             onClick={handleDownloadPdf}
             className="mt-6 w-full py-3 px-6 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition-colors flex items-center justify-center gap-2"
           >
             <svg
-              className="w-5 h-5"
+              className="w-5 h-5 shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"

@@ -1,3 +1,5 @@
+import "server-only";
+
 import { createPublicClient, http, formatEther } from "viem";
 import { rootstock } from "viem/chains";
 import type { TransactionData } from "./types";
@@ -8,27 +10,50 @@ const client = createPublicClient({
   transport: http(ROOTSTOCK_RPC_URL),
 });
 
+const TX_HASH_REGEX = /^0x[a-fA-F0-9]{64}$/;
+
+export function assertValidTxHash(input: string): `0x${string}` {
+  const trimmed = input.trim();
+  const normalized = trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`;
+  if (!TX_HASH_REGEX.test(normalized)) {
+    throw new Error(
+      "Invalid transaction hash: expected 64 hexadecimal characters (optional 0x prefix)."
+    );
+  }
+  return normalized as `0x${string}`;
+}
+
 export async function fetchTransaction(txHash: string): Promise<TransactionData> {
-  const hash = txHash.startsWith("0x") ? txHash : `0x${txHash}`;
+  const hash = assertValidTxHash(txHash);
 
   const [tx, receipt] = await Promise.all([
-    client.getTransaction({ hash: hash as `0x${string}` }),
-    client.getTransactionReceipt({ hash: hash as `0x${string}` }),
+    client.getTransaction({ hash }),
+    client.getTransactionReceipt({ hash }),
   ]);
 
   if (!tx) {
     throw new Error("Transaction not found. Please check the transaction hash.");
   }
 
-  // Fetch block for timestamp
+  if (tx.blockNumber == null) {
+    throw new Error(
+      "This transaction is still pending. Wait for block confirmation before generating a receipt."
+    );
+  }
+
+  if (!receipt) {
+    throw new Error(
+      "No receipt found. The transaction may still be pending or was dropped from the network."
+    );
+  }
+
   const blockData = await client.getBlock({
-    blockNumber: tx.blockNumber!,
+    blockNumber: tx.blockNumber,
   });
 
-  const receiptData = receipt!;
   const value = tx.value;
-  const gasUsed = receiptData.gasUsed;
-  const gasPrice = receiptData.effectiveGasPrice ?? tx.gasPrice ?? BigInt(0);
+  const gasUsed = receipt.gasUsed;
+  const gasPrice = receipt.effectiveGasPrice ?? tx.gasPrice ?? BigInt(0);
   const timestamp = Number(blockData.timestamp);
 
   return {
@@ -39,10 +64,10 @@ export async function fetchTransaction(txHash: string): Promise<TransactionData>
     valueFormatted: formatEther(value),
     gasUsed,
     gasPrice,
-    blockNumber: tx.blockNumber!,
+    blockNumber: tx.blockNumber,
     timestamp,
     blockTimestamp: new Date(timestamp * 1000),
-    status: receiptData.status === "success" ? "success" : "reverted",
-    logs: receiptData.logs,
+    status: receipt.status === "success" ? "success" : "reverted",
+    logs: receipt.logs,
   };
 }

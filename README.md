@@ -1,8 +1,8 @@
 # RSK Receipts- The Web3 Bookkeeper
 
-A pure frontend utility that simplifies accounting for Web3 freelancers and DAOs on the Rootstock blockchain. Input a Rootstock transaction hash and get a printable PDF receipt with historical USD value for tax and accounting purposes.
+A utility for Web3 freelancers and DAOs on the Rootstock blockchain. Input a Rootstock transaction hash and get a printable PDF receipt with historical USD value for tax and accounting purposes.
 
-**Zero smart contracts.** All processing happens client-side.
+**Zero smart contracts.** Transaction data and pricing are resolved on the server; the PDF is generated in the browser.
 
 ## Features
 
@@ -39,7 +39,7 @@ The free CoinGecko API has a rate limit of 5–15 calls/minute. For higher limit
 
 1. Create a free account at [CoinGecko API](https://www.coingecko.com/en/api/pricing)
 2. Copy `.env.example` to `.env.local`
-3. Add `NEXT_PUBLIC_COINGECKO_API_KEY=your_key`
+3. Add `COINGECKO_API_KEY=your_key` (server-only; never use `NEXT_PUBLIC_` for API keys)
 
 ## Supported Assets
 

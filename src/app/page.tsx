@@ -21,7 +21,10 @@ export default function Home() {
         <ReceiptForm />
 
         <footer className="mt-20 text-center text-sm text-zinc-500 dark:text-zinc-500">
-          <p>Zero smart contracts. Pure frontend utility.</p>
+          <p>
+            Pricing via CoinGecko runs on the server; PDFs are built in your
+            browser.
+          </p>
           <p className="mt-1">
             Built for Web3 freelancers & DAOs on Rootstock
           </p>
