@@ -4,24 +4,14 @@ import { createPublicClient, http, formatEther } from "viem";
 import { rootstock } from "viem/chains";
 import type { TransactionData } from "./types";
 import { ROOTSTOCK_RPC_URL } from "./config";
+import { assertValidTxHash } from "./tx-hash";
 
 const client = createPublicClient({
   chain: rootstock,
   transport: http(ROOTSTOCK_RPC_URL),
 });
 
-const TX_HASH_REGEX = /^0x[a-fA-F0-9]{64}$/;
-
-export function assertValidTxHash(input: string): `0x${string}` {
-  const trimmed = input.trim();
-  const normalized = trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`;
-  if (!TX_HASH_REGEX.test(normalized)) {
-    throw new Error(
-      "Invalid transaction hash: expected 64 hexadecimal characters (optional 0x prefix)."
-    );
-  }
-  return normalized as `0x${string}`;
-}
+export { assertValidTxHash } from "./tx-hash";
 
 export async function fetchTransaction(txHash: string): Promise<TransactionData> {
   const hash = assertValidTxHash(txHash);
@@ -54,6 +44,7 @@ export async function fetchTransaction(txHash: string): Promise<TransactionData>
   const value = tx.value;
   const gasUsed = receipt.gasUsed;
   const gasPrice = receipt.effectiveGasPrice ?? tx.gasPrice ?? BigInt(0);
+  // Block time is Unix seconds; fits in Number.MAX_SAFE_INTEGER for practical epochs.
   const timestamp = Number(blockData.timestamp);
 
   return {

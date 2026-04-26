@@ -3,6 +3,7 @@ import "server-only";
 import { fetchTransaction } from "./tx-fetcher";
 import { getHistoricalPrice } from "./historical-oracle";
 import { parseTokenTransferAmount } from "./token-parser";
+import { multiplyDecimalStringByUsdPrice } from "./usd-math";
 import type { ReceiptData } from "./types";
 
 export async function processTransaction(
@@ -12,7 +13,6 @@ export async function processTransaction(
   const tx = await fetchTransaction(txHash);
   const priceData = await getHistoricalPrice(asset, tx.timestamp);
 
-  let amount: number;
   let valueFormatted: string;
 
   if (asset === "rUSDT") {
@@ -23,13 +23,14 @@ export async function processTransaction(
       );
     }
     valueFormatted = tokenAmount;
-    amount = parseFloat(tokenAmount);
   } else {
     valueFormatted = tx.valueFormatted;
-    amount = parseFloat(tx.valueFormatted);
   }
 
-  const usdValue = amount * priceData.usdPrice;
+  const usdValue = multiplyDecimalStringByUsdPrice(
+    valueFormatted,
+    priceData.usdPrice
+  );
 
   return {
     ...tx,

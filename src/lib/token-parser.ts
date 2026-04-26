@@ -4,7 +4,7 @@ import type { Log } from "viem";
 const TRANSFER_TOPIC =
   "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef" as const;
 
-function pow10(decimals: number): bigint {
+export function pow10(decimals: number): bigint {
   if (!Number.isInteger(decimals) || decimals < 0 || decimals > 100) {
     throw new RangeError("decimals must be an integer from 0 to 100");
   }
